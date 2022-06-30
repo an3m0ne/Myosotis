@@ -2,10 +2,10 @@ Function Evil-SQLConnect()
 {
     Param(
         [Parameter()]
-        [string]$InstanceName,
+        [string]$Server,
  
         [Parameter()]
-        [string]$DatabaseName,
+        [string]$Database,
 
         [Parameter()]
         [string]$Username,
@@ -14,29 +14,29 @@ Function Evil-SQLConnect()
         [string]$Password   
     )
     
-    if($InstanceName -eq $null)
+    if($Server -eq "")
     {
         Write-Output "Usage: "
-        Write-Output "Evil-SQLConnect <InstanceName> <DatabaseName> <Username> <Password>";
+        Write-Output "Evil-SQLConnect <Server> <Database> <Username> <Password>";
         Write-Output "Evil-SQLConnect sql01.example.com";
         Write-Output "Evil-SQLConnect sql01.example.com master";
         Write-Output "Evil-SQLConnect sql01.example.com master pwn P@ssw0rd";
         Write-Output "";
         return
     }
-    if($DatabaseName -eq $null)
+    if($Database -eq "")
     {
-        $DatabaseName = "master"
+        $Database = "master"
     }
 
     $global:EvilSQLConnection = New-Object -TypeName System.Data.SqlClient.SqlConnection
-    if(($Username -ne $null) -And ($Password -ne $null))
+    if(($Username -ne "") -And ($Password -ne ""))
     {
-        $global:EvilSQLConnection.ConnectionString = "Server = $InstanceName; Database = $DatabaseName; User ID = $Username; Password = $Password;"
+        $global:EvilSQLConnection.ConnectionString = "Server = $Server; Database = $Database; User ID = $Username; Password = $Password;"
     }
     else
     {
-        $global:EvilSQLConnection.ConnectionString = "Server = $InstanceName; Database = $DatabaseName; Integrated Security = True"
+        $global:EvilSQLConnection.ConnectionString = "Server = $Server; Database = $Database; Integrated Security = True"
     }
 
     try
@@ -195,6 +195,12 @@ Function Get-ImpersonationLogins()
 	    Write-Output "[+] Logins that can be impersonated: $item"
     } 
 }
+Function Get-ImpersonationLoginsEx()
+{
+    $Records =  Run-CustomQuery "SELECT gp.name AS GrantImpersonateUser , gp.type_desc AS UserType , sp.name AS ImpersonatedUser , sp.type_desc AS ImpersonatedUserType From sys.server_permissions AS sperm INNER JOIN sys.server_principals AS sp ON sp.principal_id = sperm.major_id AND sperm.class = 101 INNER JOIN sys.server_principals AS gp ON gp.principal_id = sperm.grantee_principal_id WHERE sperm.state = 'G'"
+    $Records
+}
+
 Function Get-LinkedServers()
 {
     Param(
